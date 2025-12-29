@@ -6,14 +6,14 @@ import { ChevronRight, ChevronLeft, MessageSquare, List, HelpCircle, ArrowLeft }
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-type View = 'categories' | 'questions' | 'answer';
+type View = 'welcome' | 'categories' | 'questions' | 'answer';
 
 export default function MiniAppViewer() {
     const { categories, isLoading, fetchFlow } = useFlowStore();
-    const [view, setView] = useState<View>('categories');
+    const [view, setView] = useState<View>('welcome');
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
     const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
-    const [history, setHistory] = useState<View[]>(['categories']);
+    const [history, setHistory] = useState<View[]>(['welcome']);
     const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
@@ -55,7 +55,7 @@ export default function MiniAppViewer() {
                 }
             };
 
-            if (view === 'categories') {
+            if (view === 'categories' || view === 'welcome') {
                 WebApp.BackButton.hide();
             } else {
                 WebApp.BackButton.show();
@@ -90,23 +90,30 @@ export default function MiniAppViewer() {
         }
     };
 
+    const handleStart = () => {
+        setView('categories');
+        setHistory([...history, 'categories']);
+    };
+
     if (!isMounted) return <div className="min-h-screen bg-black" />;
 
     return (
         <div className="min-h-screen bg-black text-white font-sans selection:bg-blue-500/30">
             {/* Header */}
-            <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-lg border-b border-white/10 px-4 h-14 flex items-center gap-3">
-                {view !== 'categories' && (
-                    <button onClick={goBack} className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors">
-                        <ArrowLeft size={20} />
-                    </button>
-                )}
-                <h1 className="text-lg font-semibold tracking-tight truncate">
-                    {view === 'categories' && 'Categories'}
-                    {view === 'questions' && (selectedCategory?.name || 'Questions')}
-                    {view === 'answer' && 'Answer'}
-                </h1>
-            </header>
+            {view !== 'welcome' && (
+                <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-lg border-b border-white/10 px-4 h-14 flex items-center gap-3">
+                    {view !== 'categories' && (
+                        <button onClick={goBack} className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors">
+                            <ArrowLeft size={20} />
+                        </button>
+                    )}
+                    <h1 className="text-lg font-semibold tracking-tight truncate">
+                        {view === 'categories' && 'Categories'}
+                        {view === 'questions' && (selectedCategory?.name || 'Questions')}
+                        {view === 'answer' && 'Answer'}
+                    </h1>
+                </header>
+            )}
 
             <main className="p-4 pb-20">
                 {isLoading && (
@@ -116,6 +123,35 @@ export default function MiniAppViewer() {
                     </div>
                 )}
                 <AnimatePresence mode="wait">
+                    {view === 'welcome' && (
+                        <motion.div
+                            key="welcome"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="flex flex-col items-center justify-center min-h-[80vh] text-center space-y-8 px-6"
+                        >
+                            <div className="w-32 h-32 relative mb-4">
+                                <img
+                                    src="/welcome-logo.jpg"
+                                    alt="Logo"
+                                    className="w-full h-full object-contain"
+                                />
+                            </div>
+
+                            <h2 className="text-xl font-medium leading-relaxed max-w-xs text-white/90">
+                                Hüquqi məsələlərdə sizə yol göstərmək üçün buradayıq.
+                            </h2>
+
+                            <button
+                                onClick={handleStart}
+                                className="w-full max-w-xs bg-white text-black font-semibold py-4 rounded-xl active:scale-95 transition-transform text-lg mt-8"
+                            >
+                                Başla
+                            </button>
+                        </motion.div>
+                    )}
+
                     {view === 'categories' && (
                         <motion.div
                             key="categories"
