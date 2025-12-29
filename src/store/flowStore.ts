@@ -28,11 +28,8 @@ interface FlowState {
     addAnswer: (categoryId: string, questionId: string, text: string) => void;
 }
 
-// Mock Initial Data
-const INITIAL_CATEGORIES: Category[] = [
-    { id: '2', name: 'Support', questions: [] },
-    { id: '3', name: 'Sales', questions: [] },
-];
+// Mock Initial Data (Cleared for clean start)
+const INITIAL_CATEGORIES: Category[] = [];
 
 // Helper to recursively update questions
 const updateQuestionsRecursive = (questions: Question[], targetId: string, updateFn: (q: Question) => Question): Question[] => {
