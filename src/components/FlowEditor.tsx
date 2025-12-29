@@ -280,14 +280,12 @@ function QuestionItem({ question, categoryId, index, level = 0 }: { question: Qu
                 {hasAnswers && (
                     <div className="mt-4 space-y-2 pl-4 border-l-2 border-[#222]">
                         {question.answers.map(a => (
-                            <div key={a.id} className="text-sm text-gray-400 bg-[#161616] px-3 py-2 rounded border border-[#222] flex items-center justify-between">
-                                <span>{a.text}</span>
-                                {(a as any).mediaUrl && (
-                                    <a href={(a as any).mediaUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-400">
-                                        <ImageIcon size={16} />
-                                    </a>
-                                )}
-                            </div>
+                            <AnswerItem
+                                key={a.id}
+                                answer={a}
+                                categoryId={categoryId}
+                                questionId={question.id}
+                            />
                         ))}
                     </div>
                 )}
@@ -311,6 +309,106 @@ function QuestionItem({ question, categoryId, index, level = 0 }: { question: Qu
     );
 }
 
+
+function AnswerItem({ answer, categoryId, questionId }: { answer: any, categoryId: string, questionId: string }) {
+    const { updateAnswer, deleteAnswer } = useFlowStore();
+    const [isEditing, setIsEditing] = useState(false);
+    const [text, setText] = useState(answer.text);
+    const [file, setFile] = useState<File | null>(null);
+    const [removeFile, setRemoveFile] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleSave = async () => {
+        if (text.trim() || file || (answer.mediaUrl && !removeFile)) {
+            await updateAnswer(categoryId, questionId, answer.id, text, file || undefined, removeFile);
+            setIsEditing(false);
+            setFile(null);
+            setRemoveFile(false);
+        }
+    };
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setFile(e.target.files[0]);
+            setRemoveFile(false);
+        }
+    };
+
+    if (isEditing) {
+        return (
+            <div className="group bg-[#111111] border border-[#333] rounded px-3 py-2 space-y-2">
+                <textarea
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    className="w-full bg-transparent text-sm text-gray-200 outline-none resize-none h-16"
+                    autoFocus
+                />
+
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            className="hidden"
+                            onChange={handleFileSelect}
+                            accept="image/*"
+                        />
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="text-xs text-gray-400 hover:text-white flex items-center gap-1"
+                        >
+                            <Paperclip size={12} />
+                            {file ? 'Change File' : (answer.mediaUrl && !removeFile ? 'Change File' : 'Attach File')}
+                        </button>
+
+                        {(file || (answer.mediaUrl && !removeFile)) && (
+                            <button
+                                onClick={() => { setFile(null); setRemoveFile(true); }}
+                                className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1"
+                            >
+                                <X size={12} /> Remove
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <button onClick={handleSave} className="text-xs text-blue-500 hover:text-blue-400">Save</button>
+                        <button onClick={() => setIsEditing(false)} className="text-xs text-gray-500 hover:text-gray-400">Cancel</button>
+                    </div>
+                </div>
+
+                {(file || (answer.mediaUrl && !removeFile)) && (
+                    <div className="text-xs text-gray-500 flex items-center gap-1">
+                        <ImageIcon size={12} />
+                        {file ? file.name : 'Current Image'}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    return (
+        <div className="group text-sm text-gray-400 bg-[#161616] px-3 py-2 rounded border border-[#222] flex items-center justify-between hover:border-[#333] transition-colors">
+            <div className="flex items-center gap-2 overflow-hidden">
+                <span className="truncate">{answer.text}</span>
+                {answer.mediaUrl && (
+                    <a href={answer.mediaUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-400 shrink-0">
+                        <ImageIcon size={14} />
+                    </a>
+                )}
+            </div>
+
+            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={() => setIsEditing(true)} className="text-gray-500 hover:text-white">
+                    <Edit2 size={14} />
+                </button>
+                <button onClick={() => deleteAnswer(categoryId, questionId, answer.id)} className="text-gray-500 hover:text-red-500">
+                    <Trash2 size={14} />
+                </button>
+            </div>
+        </div>
+    );
+}
 
 export function FlowEditor() {
     const [hasMounted, setHasMounted] = useState(false);

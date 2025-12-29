@@ -26,6 +26,8 @@ interface FlowState {
     updateQuestion: (categoryId: string, questionId: string, updates: Partial<Question>) => Promise<void>;
     deleteQuestion: (categoryId: string, questionId: string) => Promise<void>;
     addAnswer: (categoryId: string, questionId: string, text: string, file?: File) => Promise<void>;
+    updateAnswer: (categoryId: string, questionId: string, answerId: string, text: string, file?: File, removeFile?: boolean) => Promise<void>;
+    deleteAnswer: (categoryId: string, questionId: string, answerId: string) => Promise<void>;
 }
 
 // Helper to recursively update questions
@@ -232,6 +234,62 @@ export const useFlowStore = create<FlowState>((set, get) => ({
             }));
         } catch (error) {
             console.error('Add answer error:', error);
+        }
+    },
+
+    updateAnswer: async (categoryId, questionId, answerId, text, file, removeFile) => {
+        try {
+            const formData = new FormData();
+            formData.append('text', text);
+            if (file) {
+                formData.append('file', file);
+            }
+            if (removeFile) {
+                formData.append('removeFile', 'true');
+            }
+
+            const res = await fetch(`/api/answers/${answerId}`, {
+                method: 'PUT',
+                body: formData,
+            });
+            const updatedAnswer = await res.json();
+
+            set((state) => ({
+                categories: state.categories.map((c) =>
+                    c.id === categoryId
+                        ? {
+                            ...c,
+                            questions: updateQuestionsRecursive(c.questions, questionId, (q) => ({
+                                ...q,
+                                answers: q.answers.map(a => a.id === answerId ? updatedAnswer : a)
+                            }))
+                        }
+                        : c
+                )
+            }));
+        } catch (error) {
+            console.error('Update answer error:', error);
+        }
+    },
+
+    deleteAnswer: async (categoryId, questionId, answerId) => {
+        try {
+            await fetch(`/api/answers/${answerId}`, { method: 'DELETE' });
+            set((state) => ({
+                categories: state.categories.map((c) =>
+                    c.id === categoryId
+                        ? {
+                            ...c,
+                            questions: updateQuestionsRecursive(c.questions, questionId, (q) => ({
+                                ...q,
+                                answers: q.answers.filter(a => a.id !== answerId)
+                            }))
+                        }
+                        : c
+                )
+            }));
+        } catch (error) {
+            console.error('Delete answer error:', error);
         }
     },
 }));
