@@ -202,12 +202,43 @@ export default function MiniAppViewer() {
                                         {selectedQuestion.answers.map((ans: any) => (
                                             <div key={ans.id} className="last:mb-0">
                                                 {ans.mediaUrl && (
-                                                    <img
-                                                        src={ans.mediaUrl}
-                                                        alt="Answer Image"
-                                                        className="w-full rounded-2xl mb-4 border border-white/10"
-                                                        loading="lazy"
-                                                    />
+                                                    <div className="mb-4">
+                                                        {ans.mediaUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                                                            <div className="space-y-2">
+                                                                <img
+                                                                    src={ans.mediaUrl}
+                                                                    alt="Answer Media"
+                                                                    className="w-full rounded-2xl border border-white/10"
+                                                                    loading="lazy"
+                                                                />
+                                                                <a
+                                                                    href={ans.mediaUrl}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="inline-flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                                                                >
+                                                                    <ArrowLeft className="rotate-[135deg]" size={14} /> {/* Using ArrowLeft as generic icon if no external link icon */}
+                                                                    View Full Size
+                                                                </a>
+                                                            </div>
+                                                        ) : (
+                                                            <a
+                                                                href={ans.mediaUrl}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="flex items-center gap-3 bg-white/5 border border-white/10 p-3 rounded-xl hover:bg-white/10 transition-colors group"
+                                                            >
+                                                                <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
+                                                                    <List size={20} />
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <div className="text-sm font-medium text-white group-hover:text-blue-400 transition-colors">Attached File</div>
+                                                                    <div className="text-xs text-white/40 truncate">{ans.mediaUrl.split('/').pop()}</div>
+                                                                </div>
+                                                                <ChevronRight size={16} className="text-white/20" />
+                                                            </a>
+                                                        )}
+                                                    </div>
                                                 )}
                                                 <div>{ans.text}</div>
                                             </div>
