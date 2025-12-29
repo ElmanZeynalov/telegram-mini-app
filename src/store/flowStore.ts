@@ -1,7 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { Category, Language, SUPPORTED_LANGUAGES, Question } from '@/types';
-import { v4 as uuidv4 } from 'uuid';
 
 interface FlowState {
     languages: Language[];
@@ -9,27 +7,26 @@ interface FlowState {
     categories: Category[];
     selectedCategoryId: string | null;
     searchQuery: string;
+    isLoading: boolean;
 
     // Actions
     setLanguage: (code: string) => void;
     setSearchQuery: (query: string) => void;
+    fetchFlow: () => Promise<void>;
 
     // Category Actions
-    addCategory: (name: string) => void;
+    addCategory: (name: string) => Promise<void>;
     selectCategory: (id: string) => void;
-    deleteCategory: (id: string) => void;
-    reorderCategories: (newOrder: Category[]) => void;
-    updateCategory: (id: string, name: string) => void;
+    deleteCategory: (id: string) => Promise<void>;
+    reorderCategories: (newOrder: Category[]) => void; // TODO: Sync reorder with DB
+    updateCategory: (id: string, name: string) => Promise<void>;
 
     // Question Actions
-    addQuestion: (categoryId: string, text?: string, parentId?: string) => void;
-    updateQuestion: (categoryId: string, questionId: string, updates: Partial<Question>) => void;
-    deleteQuestion: (categoryId: string, questionId: string) => void;
-    addAnswer: (categoryId: string, questionId: string, text: string) => void;
+    addQuestion: (categoryId: string, text?: string, parentId?: string) => Promise<void>;
+    updateQuestion: (categoryId: string, questionId: string, updates: Partial<Question>) => Promise<void>;
+    deleteQuestion: (categoryId: string, questionId: string) => Promise<void>;
+    addAnswer: (categoryId: string, questionId: string, text: string) => Promise<void>;
 }
-
-// Mock Initial Data (Cleared for clean start)
-const INITIAL_CATEGORIES: Category[] = [];
 
 // Helper to recursively update questions
 const updateQuestionsRecursive = (questions: Question[], targetId: string, updateFn: (q: Question) => Question): Question[] => {
@@ -65,68 +62,118 @@ const addSubQuestionRecursive = (questions: Question[], parentId: string, newQue
     });
 };
 
-export const useFlowStore = create<FlowState>()(
-    persist(
-        (set) => ({
-            languages: SUPPORTED_LANGUAGES,
-            currentLanguage: SUPPORTED_LANGUAGES[0],
-            categories: INITIAL_CATEGORIES,
-            selectedCategoryId: null,
-            searchQuery: '',
+export const useFlowStore = create<FlowState>((set, get) => ({
+    languages: SUPPORTED_LANGUAGES,
+    currentLanguage: SUPPORTED_LANGUAGES[0],
+    categories: [],
+    selectedCategoryId: null,
+    searchQuery: '',
+    isLoading: false,
 
-            setLanguage: (code) => set((state) => ({
-                currentLanguage: state.languages.find((l) => l.code === code) || state.currentLanguage
-            })),
+    fetchFlow: async () => {
+        set({ isLoading: true });
+        try {
+            const res = await fetch('/api/flow');
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                set({ categories: data });
+                if (data.length > 0 && !get().selectedCategoryId) {
+                    set({ selectedCategoryId: data[0].id });
+                }
+            }
+        } catch (error) {
+            console.error('Failed to fetch flow:', error);
+        } finally {
+            set({ isLoading: false });
+        }
+    },
 
-            setSearchQuery: (query) => set({ searchQuery: query }),
+    setLanguage: (code) => set((state) => ({
+        currentLanguage: state.languages.find((l) => l.code === code) || state.currentLanguage
+    })),
 
-            addCategory: (name) => set((state) => ({
-                categories: [
-                    ...state.categories,
-                    { id: uuidv4(), name, questions: [] }
-                ]
-            })),
+    setSearchQuery: (query) => set({ searchQuery: query }),
 
-            selectCategory: (id) => set({ selectedCategoryId: id }),
+    addCategory: async (name) => {
+        try {
+            const res = await fetch('/api/categories', {
+                method: 'POST',
+                body: JSON.stringify({ name }),
+            });
+            const newCat = await res.json();
+            set((state) => ({
+                categories: [...state.categories, { ...newCat, questions: [] }]
+            }));
+        } catch (error) {
+            console.error('Add category error:', error);
+        }
+    },
 
-            deleteCategory: (id) => set((state) => ({
+    selectCategory: (id) => set({ selectedCategoryId: id }),
+
+    deleteCategory: async (id) => {
+        try {
+            await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+            set((state) => ({
                 categories: state.categories.filter((c) => c.id !== id),
                 selectedCategoryId: state.selectedCategoryId === id ? null : state.selectedCategoryId
-            })),
+            }));
+        } catch (error) {
+            console.error('Delete category error:', error);
+        }
+    },
 
-            reorderCategories: (newOrder) => set({ categories: newOrder }),
+    reorderCategories: (newOrder) => set({ categories: newOrder }),
 
-            updateCategory: (id, name) => set((state) => ({
+    updateCategory: async (id, name) => {
+        try {
+            await fetch(`/api/categories/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ name }),
+            });
+            set((state) => ({
                 categories: state.categories.map((c) =>
                     c.id === id ? { ...c, name } : c
                 )
-            })),
+            }));
+        } catch (error) {
+            console.error('Update category error:', error);
+        }
+    },
 
-            addQuestion: (categoryId, text = '', parentId) => set((state) => {
-                const newQuestion: Question = {
-                    id: uuidv4(),
-                    text,
-                    answers: [],
-                    subQuestions: []
-                };
+    addQuestion: async (categoryId, text = '', parentId) => {
+        try {
+            const res = await fetch('/api/questions', {
+                method: 'POST',
+                body: JSON.stringify({ text, categoryId, parentId }),
+            });
+            const newQuestion = await res.json();
 
-                return {
-                    categories: state.categories.map((c) => {
-                        if (c.id !== categoryId) return c;
+            set((state) => ({
+                categories: state.categories.map((c) => {
+                    if (c.id !== categoryId) return c;
+                    const questionWithEmptyFields = { ...newQuestion, answers: [], subQuestions: [] };
+                    if (parentId) {
+                        return {
+                            ...c,
+                            questions: addSubQuestionRecursive(c.questions, parentId, questionWithEmptyFields)
+                        };
+                    }
+                    return { ...c, questions: [...c.questions, questionWithEmptyFields] };
+                })
+            }));
+        } catch (error) {
+            console.error('Add question error:', error);
+        }
+    },
 
-                        if (parentId) {
-                            return {
-                                ...c,
-                                questions: addSubQuestionRecursive(c.questions, parentId, newQuestion)
-                            };
-                        }
-
-                        return { ...c, questions: [...c.questions, newQuestion] };
-                    })
-                };
-            }),
-
-            updateQuestion: (categoryId, questionId, updates) => set((state) => ({
+    updateQuestion: async (categoryId, questionId, updates) => {
+        try {
+            await fetch(`/api/questions/${questionId}`, {
+                method: 'PUT',
+                body: JSON.stringify(updates),
+            });
+            set((state) => ({
                 categories: state.categories.map((c) =>
                     c.id === categoryId
                         ? {
@@ -135,33 +182,49 @@ export const useFlowStore = create<FlowState>()(
                         }
                         : c
                 )
-            })),
+            }));
+        } catch (error) {
+            console.error('Update question error:', error);
+        }
+    },
 
-            deleteQuestion: (categoryId, questionId) => set((state) => ({
+    deleteQuestion: async (categoryId, questionId) => {
+        try {
+            await fetch(`/api/questions/${questionId}`, { method: 'DELETE' });
+            set((state) => ({
                 categories: state.categories.map((c) =>
                     c.id === categoryId
                         ? { ...c, questions: deleteQuestionRecursive(c.questions, questionId) }
                         : c
                 )
-            })),
+            }));
+        } catch (error) {
+            console.error('Delete question error:', error);
+        }
+    },
 
-            addAnswer: (categoryId, questionId, text) => set((state) => ({
+    addAnswer: async (categoryId, questionId, text) => {
+        try {
+            const res = await fetch('/api/answers', {
+                method: 'POST',
+                body: JSON.stringify({ text, questionId }),
+            });
+            const newAnswer = await res.json();
+            set((state) => ({
                 categories: state.categories.map((c) =>
                     c.id === categoryId
                         ? {
                             ...c,
                             questions: updateQuestionsRecursive(c.questions, questionId, (q) => ({
                                 ...q,
-                                answers: [...q.answers, { id: uuidv4(), text }]
+                                answers: [...q.answers, newAnswer]
                             }))
                         }
                         : c
                 )
-            })),
-
-        }),
-        {
-            name: 'flow-builder-storage',
+            }));
+        } catch (error) {
+            console.error('Add answer error:', error);
         }
-    )
-);
+    },
+}));

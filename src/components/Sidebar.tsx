@@ -33,12 +33,18 @@ export function Sidebar() {
         setSearchQuery,
         updateCategory,
         deleteCategory,
-        reorderCategories
+        reorderCategories,
+        isLoading,
+        fetchFlow
     } = useFlowStore();
 
     const [newCategoryName, setNewCategoryName] = useState('');
     const [isAdding, setIsAdding] = useState(false);
     const [isLangOpen, setIsLangOpen] = useState(false);
+
+    useEffect(() => {
+        fetchFlow();
+    }, [fetchFlow]);
 
     // Edit & Menu State
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -191,7 +197,13 @@ export function Sidebar() {
                                 ref={provided.innerRef}
                                 className="space-y-1"
                             >
-                                {filteredCategories.map((category, index) => (
+                                {isLoading ? (
+                                    <div className="space-y-2 px-2">
+                                        {[1, 2, 3].map(i => (
+                                            <div key={i} className="h-10 bg-white/5 animate-pulse rounded-lg" />
+                                        ))}
+                                    </div>
+                                ) : filteredCategories.map((category, index) => (
                                     <Draggable key={category.id} draggableId={category.id} index={index}>
                                         {(provided, snapshot) => (
                                             <div

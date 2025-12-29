@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 type View = 'categories' | 'questions' | 'answer';
 
 export default function MiniAppViewer() {
-    const { categories } = useFlowStore();
+    const { categories, isLoading, fetchFlow } = useFlowStore();
     const [view, setView] = useState<View>('categories');
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
     const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
@@ -18,7 +18,8 @@ export default function MiniAppViewer() {
 
     useEffect(() => {
         setIsMounted(true);
-    }, []);
+        fetchFlow();
+    }, [fetchFlow]);
 
     const selectedCategory = categories.find(c => c.id === selectedCategoryId);
 
@@ -108,6 +109,12 @@ export default function MiniAppViewer() {
             </header>
 
             <main className="p-4 pb-20">
+                {isLoading && (
+                    <div className="flex flex-col items-center justify-center py-20 gap-4">
+                        <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                        <p className="text-white/40 font-medium">Loading content...</p>
+                    </div>
+                )}
                 <AnimatePresence mode="wait">
                     {view === 'categories' && (
                         <motion.div

@@ -1,0 +1,47 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL") // uses connection pooling
+  directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
+}
+
+model Category {
+  id        String     @id @default(uuid())
+  name      String
+  order     Int        @default(0)
+  questions Question[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Question {
+  id               String     @id @default(uuid())
+  text             String
+  order            Int        @default(0)
+  categoryId       String
+  category         Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  // Recursive relationship for sub-questions
+  parentId         String?
+  parent           Question?  @relation("SubQuestions", fields: [parentId], references: [id], onDelete: Cascade)
+  subQuestions     Question[] @relation("SubQuestions")
+  
+  answers          Answer[]
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+}
+
+model Answer {
+  id         String   @id @default(uuid())
+  text       String
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

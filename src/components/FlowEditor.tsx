@@ -287,11 +287,28 @@ export function FlowEditor() {
         categories,
         currentLanguage,
         addQuestion,
+        isLoading,
+        fetchFlow
     } = useFlowStore();
+
+    useEffect(() => {
+        fetchFlow();
+    }, [fetchFlow]);
 
     const activeCategory = categories.find(c => c.id === selectedCategoryId);
 
     if (!hasMounted) return <div className="flex-1 bg-black" />;
+
+    if (isLoading) {
+        return (
+            <div className="flex-1 flex items-center justify-center bg-black">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-gray-500 text-sm">Loading flow...</p>
+                </div>
+            </div>
+        );
+    }
 
     if (!selectedCategoryId || !activeCategory) {
         return (
