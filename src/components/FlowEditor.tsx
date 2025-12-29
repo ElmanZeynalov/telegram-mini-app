@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useFlowStore } from '@/store/flowStore';
 import { cn } from '@/lib/utils';
 import { MessageSquare, Plus, Globe, Bold, Italic, Link, Code, Edit2, Trash2, GripVertical, AlertCircle, FileText, Heading2, List, HelpCircle, X, CheckCircle, ChevronDown, ChevronRight, CornerDownRight } from 'lucide-react';
@@ -276,6 +276,11 @@ function QuestionItem({ question, categoryId, index, level = 0 }: { question: Qu
 
 
 export function FlowEditor() {
+    const [hasMounted, setHasMounted] = useState(false);
+    useEffect(() => {
+        setHasMounted(true);
+    }, []);
+
     const [newQuestionText, setNewQuestionText] = useState('');
     const {
         selectedCategoryId,
@@ -285,6 +290,8 @@ export function FlowEditor() {
     } = useFlowStore();
 
     const activeCategory = categories.find(c => c.id === selectedCategoryId);
+
+    if (!hasMounted) return <div className="flex-1 bg-black" />;
 
     if (!selectedCategoryId || !activeCategory) {
         return (

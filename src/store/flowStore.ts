@@ -74,7 +74,7 @@ export const useFlowStore = create<FlowState>()(
             languages: SUPPORTED_LANGUAGES,
             currentLanguage: SUPPORTED_LANGUAGES[0],
             categories: INITIAL_CATEGORIES,
-            selectedCategoryId: INITIAL_CATEGORIES[0].id,
+            selectedCategoryId: null,
             searchQuery: '',
 
             setLanguage: (code) => set((state) => ({

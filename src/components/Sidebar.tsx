@@ -14,9 +14,13 @@ import {
     X
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export function Sidebar() {
+    const [hasMounted, setHasMounted] = useState(false);
+    useEffect(() => {
+        setHasMounted(true);
+    }, []);
     const {
         categories,
         languages,
@@ -70,6 +74,8 @@ export function Sidebar() {
             setIsAdding(false);
         }
     };
+
+    if (!hasMounted) return <div className="w-[300px] bg-[#111111] border-r border-[#222] h-screen" />;
 
     return (
         <div className="w-[300px] bg-[#111111] border-r border-[#222] flex flex-col h-screen text-white shrink-0">
