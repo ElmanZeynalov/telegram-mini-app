@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { Category, Language, SUPPORTED_LANGUAGES, Question } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -67,96 +68,103 @@ const addSubQuestionRecursive = (questions: Question[], parentId: string, newQue
     });
 };
 
-export const useFlowStore = create<FlowState>((set) => ({
-    languages: SUPPORTED_LANGUAGES,
-    currentLanguage: SUPPORTED_LANGUAGES[0],
-    categories: INITIAL_CATEGORIES,
-    selectedCategoryId: INITIAL_CATEGORIES[0].id,
-    searchQuery: '',
+export const useFlowStore = create<FlowState>()(
+    persist(
+        (set) => ({
+            languages: SUPPORTED_LANGUAGES,
+            currentLanguage: SUPPORTED_LANGUAGES[0],
+            categories: INITIAL_CATEGORIES,
+            selectedCategoryId: INITIAL_CATEGORIES[0].id,
+            searchQuery: '',
 
-    setLanguage: (code) => set((state) => ({
-        currentLanguage: state.languages.find((l) => l.code === code) || state.currentLanguage
-    })),
+            setLanguage: (code) => set((state) => ({
+                currentLanguage: state.languages.find((l) => l.code === code) || state.currentLanguage
+            })),
 
-    setSearchQuery: (query) => set({ searchQuery: query }),
+            setSearchQuery: (query) => set({ searchQuery: query }),
 
-    addCategory: (name) => set((state) => ({
-        categories: [
-            ...state.categories,
-            { id: uuidv4(), name, questions: [] }
-        ]
-    })),
+            addCategory: (name) => set((state) => ({
+                categories: [
+                    ...state.categories,
+                    { id: uuidv4(), name, questions: [] }
+                ]
+            })),
 
-    selectCategory: (id) => set({ selectedCategoryId: id }),
+            selectCategory: (id) => set({ selectedCategoryId: id }),
 
-    deleteCategory: (id) => set((state) => ({
-        categories: state.categories.filter((c) => c.id !== id),
-        selectedCategoryId: state.selectedCategoryId === id ? null : state.selectedCategoryId
-    })),
+            deleteCategory: (id) => set((state) => ({
+                categories: state.categories.filter((c) => c.id !== id),
+                selectedCategoryId: state.selectedCategoryId === id ? null : state.selectedCategoryId
+            })),
 
-    reorderCategories: (newOrder) => set({ categories: newOrder }),
+            reorderCategories: (newOrder) => set({ categories: newOrder }),
 
-    updateCategory: (id, name) => set((state) => ({
-        categories: state.categories.map((c) =>
-            c.id === id ? { ...c, name } : c
-        )
-    })),
+            updateCategory: (id, name) => set((state) => ({
+                categories: state.categories.map((c) =>
+                    c.id === id ? { ...c, name } : c
+                )
+            })),
 
-    addQuestion: (categoryId, text = '', parentId) => set((state) => {
-        const newQuestion: Question = {
-            id: uuidv4(),
-            text,
-            answers: [],
-            subQuestions: []
-        };
+            addQuestion: (categoryId, text = '', parentId) => set((state) => {
+                const newQuestion: Question = {
+                    id: uuidv4(),
+                    text,
+                    answers: [],
+                    subQuestions: []
+                };
 
-        return {
-            categories: state.categories.map((c) => {
-                if (c.id !== categoryId) return c;
+                return {
+                    categories: state.categories.map((c) => {
+                        if (c.id !== categoryId) return c;
 
-                if (parentId) {
-                    return {
-                        ...c,
-                        questions: addSubQuestionRecursive(c.questions, parentId, newQuestion)
-                    };
-                }
+                        if (parentId) {
+                            return {
+                                ...c,
+                                questions: addSubQuestionRecursive(c.questions, parentId, newQuestion)
+                            };
+                        }
 
-                return { ...c, questions: [...c.questions, newQuestion] };
-            })
-        };
-    }),
+                        return { ...c, questions: [...c.questions, newQuestion] };
+                    })
+                };
+            }),
 
-    updateQuestion: (categoryId, questionId, updates) => set((state) => ({
-        categories: state.categories.map((c) =>
-            c.id === categoryId
-                ? {
-                    ...c,
-                    questions: updateQuestionsRecursive(c.questions, questionId, (q) => ({ ...q, ...updates }))
-                }
-                : c
-        )
-    })),
+            updateQuestion: (categoryId, questionId, updates) => set((state) => ({
+                categories: state.categories.map((c) =>
+                    c.id === categoryId
+                        ? {
+                            ...c,
+                            questions: updateQuestionsRecursive(c.questions, questionId, (q) => ({ ...q, ...updates }))
+                        }
+                        : c
+                )
+            })),
 
-    deleteQuestion: (categoryId, questionId) => set((state) => ({
-        categories: state.categories.map((c) =>
-            c.id === categoryId
-                ? { ...c, questions: deleteQuestionRecursive(c.questions, questionId) }
-                : c
-        )
-    })),
+            deleteQuestion: (categoryId, questionId) => set((state) => ({
+                categories: state.categories.map((c) =>
+                    c.id === categoryId
+                        ? { ...c, questions: deleteQuestionRecursive(c.questions, questionId) }
+                        : c
+                )
+            })),
 
-    addAnswer: (categoryId, questionId, text) => set((state) => ({
-        categories: state.categories.map((c) =>
-            c.id === categoryId
-                ? {
-                    ...c,
-                    questions: updateQuestionsRecursive(c.questions, questionId, (q) => ({
-                        ...q,
-                        answers: [...q.answers, { id: uuidv4(), text }]
-                    }))
-                }
-                : c
-        )
-    })),
+            addAnswer: (categoryId, questionId, text) => set((state) => ({
+                categories: state.categories.map((c) =>
+                    c.id === categoryId
+                        ? {
+                            ...c,
+                            questions: updateQuestionsRecursive(c.questions, questionId, (q) => ({
+                                ...q,
+                                answers: [...q.answers, { id: uuidv4(), text }]
+                            }))
+                        }
+                        : c
+                )
+            })),
 
-}));
+        }),
+        {
+            name: 'flow-builder-storage',
+        }
+    )
+);
