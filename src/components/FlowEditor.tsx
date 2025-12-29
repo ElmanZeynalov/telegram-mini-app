@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useFlowStore } from '@/store/flowStore';
 import { cn } from '@/lib/utils';
-import { MessageSquare, Plus, Globe, Bold, Italic, Link, Code, Edit2, Trash2, GripVertical, AlertCircle, FileText, Heading2, List, HelpCircle, X, CheckCircle, ChevronDown, ChevronRight, CornerDownRight } from 'lucide-react';
+import { MessageSquare, Plus, Globe, Bold, Italic, Link, Code, Edit2, Trash2, GripVertical, AlertCircle, FileText, Heading2, List, HelpCircle, X, CheckCircle, ChevronDown, ChevronRight, CornerDownRight, Image as ImageIcon, Paperclip } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Question } from '@/types';
+import { useRef } from 'react';
 
 // --- Components ---
 
@@ -31,6 +32,8 @@ function QuestionItem({ question, categoryId, index, level = 0 }: { question: Qu
     // Composers state
     const [activeComposer, setActiveComposer] = useState<'answer' | 'subQuestion' | null>(null);
     const [composerText, setComposerText] = useState('');
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [showSubQuestions, setShowSubQuestions] = useState(true);
 
@@ -43,10 +46,17 @@ function QuestionItem({ question, categoryId, index, level = 0 }: { question: Qu
     };
 
     const handleAddAnswer = () => {
-        if (composerText.trim()) {
-            addAnswer(categoryId, question.id, composerText);
+        if (composerText.trim() || selectedFile) {
+            addAnswer(categoryId, question.id, composerText, selectedFile || undefined);
             setComposerText('');
+            setSelectedFile(null);
             setActiveComposer(null);
+        }
+    };
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setSelectedFile(e.target.files[0]);
         }
     };
 
@@ -223,6 +233,28 @@ function QuestionItem({ question, categoryId, index, level = 0 }: { question: Qu
                                             }
                                         }}
                                     />
+                                    {activeComposer === 'answer' && (
+                                        <div className="px-4 pb-4">
+                                            <input
+                                                type="file"
+                                                ref={fileInputRef}
+                                                className="hidden"
+                                                onChange={handleFileSelect}
+                                                accept="image/*"
+                                            />
+                                            <button
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="flex items-center gap-2 text-xs text-gray-400 hover:text-white transition-colors border border-[#333] rounded px-3 py-1.5 hover:border-[#555]"
+                                            >
+                                                <Paperclip size={14} />
+                                                {selectedFile ? (
+                                                    <span className="text-blue-400">{selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)</span>
+                                                ) : (
+                                                    <span>Attach Image</span>
+                                                )}
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="flex justify-end gap-3 mt-4 items-center">
                                     <button
@@ -248,8 +280,13 @@ function QuestionItem({ question, categoryId, index, level = 0 }: { question: Qu
                 {hasAnswers && (
                     <div className="mt-4 space-y-2 pl-4 border-l-2 border-[#222]">
                         {question.answers.map(a => (
-                            <div key={a.id} className="text-sm text-gray-400 bg-[#161616] px-3 py-2 rounded border border-[#222]">
-                                {a.text}
+                            <div key={a.id} className="text-sm text-gray-400 bg-[#161616] px-3 py-2 rounded border border-[#222] flex items-center justify-between">
+                                <span>{a.text}</span>
+                                {(a as any).mediaUrl && (
+                                    <a href={(a as any).mediaUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-400">
+                                        <ImageIcon size={16} />
+                                    </a>
+                                )}
                             </div>
                         ))}
                     </div>

@@ -198,10 +198,18 @@ export default function MiniAppViewer() {
                             <div className="space-y-4">
                                 <h2 className="text-xs font-bold uppercase tracking-widest text-white/30 px-1">Answer</h2>
                                 {selectedQuestion.answers.length > 0 ? (
-                                    <div className="bg-[#111111] border border-white/5 p-6 rounded-3xl text-lg leading-relaxed text-white/80">
+                                    <div className="bg-[#111111] border border-white/5 p-6 rounded-3xl text-lg leading-relaxed text-white/80 space-y-4">
                                         {selectedQuestion.answers.map((ans: any) => (
-                                            <div key={ans.id} className="mb-4 last:mb-0">
-                                                {ans.text}
+                                            <div key={ans.id} className="last:mb-0">
+                                                {ans.mediaUrl && (
+                                                    <img
+                                                        src={ans.mediaUrl}
+                                                        alt="Answer Image"
+                                                        className="w-full rounded-2xl mb-4 border border-white/10"
+                                                        loading="lazy"
+                                                    />
+                                                )}
+                                                <div>{ans.text}</div>
                                             </div>
                                         ))}
                                     </div>

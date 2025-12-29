@@ -25,7 +25,7 @@ interface FlowState {
     addQuestion: (categoryId: string, text?: string, parentId?: string) => Promise<void>;
     updateQuestion: (categoryId: string, questionId: string, updates: Partial<Question>) => Promise<void>;
     deleteQuestion: (categoryId: string, questionId: string) => Promise<void>;
-    addAnswer: (categoryId: string, questionId: string, text: string) => Promise<void>;
+    addAnswer: (categoryId: string, questionId: string, text: string, file?: File) => Promise<void>;
 }
 
 // Helper to recursively update questions
@@ -203,11 +203,18 @@ export const useFlowStore = create<FlowState>((set, get) => ({
         }
     },
 
-    addAnswer: async (categoryId, questionId, text) => {
+    addAnswer: async (categoryId, questionId, text, file) => {
         try {
+            const formData = new FormData();
+            formData.append('text', text);
+            formData.append('questionId', questionId);
+            if (file) {
+                formData.append('file', file);
+            }
+
             const res = await fetch('/api/answers', {
                 method: 'POST',
-                body: JSON.stringify({ text, questionId }),
+                body: formData,
             });
             const newAnswer = await res.json();
             set((state) => ({
