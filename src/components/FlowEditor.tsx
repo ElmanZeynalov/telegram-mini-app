@@ -45,18 +45,33 @@ function QuestionItem({ question, categoryId, index, level = 0 }: { question: Qu
         setIsEditing(false);
     };
 
-    const handleAddAnswer = () => {
+    const [isUploading, setIsUploading] = useState(false);
+
+    const handleAddAnswer = async () => {
         if (composerText.trim() || selectedFile) {
-            addAnswer(categoryId, question.id, composerText, selectedFile || undefined);
-            setComposerText('');
-            setSelectedFile(null);
-            setActiveComposer(null);
+            setIsUploading(true);
+            try {
+                await addAnswer(categoryId, question.id, composerText, selectedFile || undefined);
+                setComposerText('');
+                setSelectedFile(null);
+                setActiveComposer(null);
+            } catch (error) {
+                alert('Failed to add answer. Please check file size (max 4.5MB) or try again.');
+            } finally {
+                setIsUploading(false);
+            }
         }
     };
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
-            setSelectedFile(e.target.files[0]);
+            const file = e.target.files[0];
+            if (file.size > 4.5 * 1024 * 1024) {
+                alert('File size too large. Max 4.5MB allowed.');
+                e.target.value = '';
+                return;
+            }
+            setSelectedFile(file);
         }
     };
 
@@ -259,10 +274,11 @@ function QuestionItem({ question, categoryId, index, level = 0 }: { question: Qu
                                 <div className="flex justify-end gap-3 mt-4 items-center">
                                     <button
                                         onClick={activeComposer === 'answer' ? handleAddAnswer : handleAddSubQuestion}
-                                        disabled={!composerText.trim()}
-                                        className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors"
+                                        disabled={!composerText.trim() || isUploading}
+                                        className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
                                     >
-                                        Add
+                                        {isUploading && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                                        {isUploading ? 'Adding...' : 'Add'}
                                     </button>
                                     <button
                                         onClick={() => setActiveComposer(null)}
@@ -318,18 +334,33 @@ function AnswerItem({ answer, categoryId, questionId }: { answer: any, categoryI
     const [removeFile, setRemoveFile] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const [isSaving, setIsSaving] = useState(false);
+
     const handleSave = async () => {
         if (text.trim() || file || (answer.mediaUrl && !removeFile)) {
-            await updateAnswer(categoryId, questionId, answer.id, text, file || undefined, removeFile);
-            setIsEditing(false);
-            setFile(null);
-            setRemoveFile(false);
+            setIsSaving(true);
+            try {
+                await updateAnswer(categoryId, questionId, answer.id, text, file || undefined, removeFile);
+                setIsEditing(false);
+                setFile(null);
+                setRemoveFile(false);
+            } catch (error) {
+                alert('Failed to save answer. Please check file size (max 4.5MB) or try again.');
+            } finally {
+                setIsSaving(false);
+            }
         }
     };
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
-            setFile(e.target.files[0]);
+            const selectedFile = e.target.files[0];
+            if (selectedFile.size > 4.5 * 1024 * 1024) {
+                alert('File size too large. Max 4.5MB allowed.');
+                e.target.value = '';
+                return;
+            }
+            setFile(selectedFile);
             setRemoveFile(false);
         }
     };
@@ -372,7 +403,14 @@ function AnswerItem({ answer, categoryId, questionId }: { answer: any, categoryI
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <button onClick={handleSave} className="text-xs text-blue-500 hover:text-blue-400">Save</button>
+                        <button
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            className="text-xs text-blue-500 hover:text-blue-400 disabled:opacity-50 flex items-center gap-1"
+                        >
+                            {isSaving && <div className="w-2 h-2 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />}
+                            {isSaving ? 'Saving...' : 'Save'}
+                        </button>
                         <button onClick={() => setIsEditing(false)} className="text-xs text-gray-500 hover:text-gray-400">Cancel</button>
                     </div>
                 </div>

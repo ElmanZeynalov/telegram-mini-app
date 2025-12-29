@@ -234,6 +234,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
             }));
         } catch (error) {
             console.error('Add answer error:', error);
+            throw error;
         }
     },
 
@@ -269,6 +270,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
             }));
         } catch (error) {
             console.error('Update answer error:', error);
+            throw error;
         }
     },
 
